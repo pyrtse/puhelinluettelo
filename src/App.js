@@ -1,10 +1,11 @@
 import React from 'react';
+import axios from 'axios';
 
 const Person = (props) => {
   return (
     <tr>
       <td>{props.person.name}</td>
-      <td>{props.person.num}</td>
+      <td>{props.person.number}</td>
     </tr>
   )
 }
@@ -13,7 +14,7 @@ const Persons = ({ persons }) => {
   return (
     <table>
       <tbody>
-        {persons.map(person => <Person key={person.name} person={person} />)}
+        {persons.map(person => <Person key={person.id} person={person} />)}
       </tbody>
     </table>
   )
@@ -23,23 +24,30 @@ class App extends React.Component {
   constructor(props) {
     super(props)
     this.state = {
-      persons: [
-        { name: 'Arto Hellas', number: '040-123456' },
-        { name: 'Martti Tienari', number: '040-123456' },
-        { name: 'Arto Järvinen', number: '040-123456' },
-        { name: 'Lea Kutvonen', number: '040-123456' }
-      ],
+      persons: [],
       newName: '',
       newNumber: '',
       filter: ''
     }
   }
 
+  componentDidMount() {
+    axios
+      .get('http://localhost:3001/persons')
+      .then(response => {
+        this.setState({persons: response.data})
+      })
+      axios
+      .get('http://localhost:3001/persons')
+      .then(response => console.log(response.data))
+  }
+
   addNumber = (event) => {
     event.preventDefault()
     const pObject = {
       name: this.state.newName,
-      num: this.state.newNum
+      number: this.state.newNum,
+      id: this.state.persons.length +1
     }
 
     const names = this.state.persons.map(person => person.name)
