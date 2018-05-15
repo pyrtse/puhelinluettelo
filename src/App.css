@@ -26,3 +26,11 @@
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
 }
+
+.note {
+  color: black;
+  background: green;
+  font-size: 15px;
+  border-style: hidden;
+  margin-top: 30px;
+}

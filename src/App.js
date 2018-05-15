@@ -1,22 +1,40 @@
 import React from 'react';
-import axios from 'axios';
+import personService from './services/persons'
+import style from './App.css'
 
 const Person = (props) => {
   return (
     <tr>
       <td>{props.person.name}</td>
       <td>{props.person.number}</td>
+      <td>
+        <button onClick={() => window.confirm(`Poistetaanko ${props.person.name}`) ?  personService
+          .deleteNum(props.person.id)
+          .then(props.ref) : console.log('ei muuteta')
+          }>Poista</button>
+      </td>
     </tr>
   )
 }
 
-const Persons = ({ persons }) => {
+const Persons = (props) => {
   return (
     <table>
       <tbody>
-        {persons.map(person => <Person key={person.id} person={person} />)}
+        {props.persons.map(person => <Person key={person.id} person={person} ref={props.ref}/>)}
       </tbody>
     </table>
+  )
+}
+
+const Notification  = ({message}) => {
+  if (message === null) {
+    return null
+  }
+  return (
+    <div className='note'>
+      {message}
+    </div>
   )
 }
 
@@ -26,20 +44,19 @@ class App extends React.Component {
     this.state = {
       persons: [],
       newName: '',
-      newNumber: '',
-      filter: ''
+      newNum: '',
+      filter: '',
+      message: ''
     }
   }
 
   componentDidMount() {
-    axios
-      .get('http://localhost:3001/persons')
+    personService
+      .getAll()
       .then(response => {
-        this.setState({persons: response.data})
+        this.setState({ persons: response.data })
       })
-      axios
-      .get('http://localhost:3001/persons')
-      .then(response => console.log(response.data))
+
   }
 
   addNumber = (event) => {
@@ -47,24 +64,58 @@ class App extends React.Component {
     const pObject = {
       name: this.state.newName,
       number: this.state.newNum,
-      id: this.state.persons.length +1
+      id: this.state.persons[this.state.persons.length - 1].id + 1
     }
 
     const names = this.state.persons.map(person => person.name)
-    console.log(names)
 
     if (names.includes(this.state.newName)) {
-      alert(this.state.newName + ' on jo listalla')
-      this.setState({ newName: '' })
+      if (window.confirm(`${this.state.newName} on jo luettelosa, korvataanko vanha numero uudella`)){
+        const found = this.state.persons.find(n => n.name === this.state.newName)
+        pObject.id = found.id
+        personService
+          .update(found.id, pObject)
+          .then(response => this.setState({
+            persons: this.state.persons.concat(response.data),
+            newName: '',
+            newNum: ''
+          }))
+          .catch(error => {
+            personService.create(pObject)
+            .then(response => this.setState({
+              persons: this.state.persons.concat(response.data),
+              newName: '',
+              newNum: ''
+            }))
+          })
+      }
     } else {
-      const persons = this.state.persons.concat(pObject)
-
-      this.setState({
-        persons: persons,
-        newName: '',
-        newNum: ''
-      })
+      personService
+        .create(pObject)
+        .then(response => this.setState({
+          persons: this.state.persons.concat(response.data),
+          newName: '',
+          newNum: '',
+          message: `Lisättiin ${pObject.name}`
+        })
+        )
     }
+  }
+
+  deleteNum = (id) => {
+    personService
+      .deleteNum(id)
+      .then(response => this.setState({
+        persons: this.state.persons.concat(response.data)
+      }))
+  }
+
+  refresh = () => {
+    personService
+      .getAll()
+      .then(response => {
+        this.setState({ persons: response.data })
+      })
   }
 
   handleNameChange = (event) => {
@@ -90,7 +141,8 @@ class App extends React.Component {
             onChange={this.handleFilterChange}
           />
         </form>
-        <h2>Lisää uusi</h2>
+        <Notification message={this.state.message} />
+        <h2>Lisää uusi /muuta olemassaolevan numeroa</h2>
         <form onSubmit={this.addNumber} >
           <div>
             nimi: <input
@@ -108,7 +160,7 @@ class App extends React.Component {
           </div>
         </form>
         <h2>Numerot</h2>
-        <Persons persons={pToShow} />
+        <Persons persons={pToShow} ref={this.refresh()} />
       </div>
     )
   }
